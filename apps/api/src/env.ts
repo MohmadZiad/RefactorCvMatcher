@@ -9,6 +9,8 @@ const EnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   // Deprecated fallback (kept for backward compat)
   SUPABASE_SERVICE_ROLE: z.string().min(1).optional(),
+  // New optional alias (deprecated)
+  STORAGE_BUCKET: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).optional(),
   SUPABASE_CV_TABLE: z.string().min(1).optional(),
 });
@@ -27,12 +29,11 @@ export const env: Env = (() => {
 
   const values = parsed.data;
 
-  // Pull out deprecated key to manage it separately
-  const { SUPABASE_SERVICE_ROLE, ...rest } = values;
+  // Extract keys for migration handling
+  const { SUPABASE_SERVICE_ROLE, STORAGE_BUCKET, SUPABASE_STORAGE_BUCKET, ...rest } = values;
 
-  // Prefer the new key, but fall back to the deprecated one with a warning
+  // Handle service role migration
   let serviceRoleKey = rest.SUPABASE_SERVICE_ROLE_KEY ?? null;
-
   if (!serviceRoleKey && SUPABASE_SERVICE_ROLE) {
     console.warn(
       "[env] SUPABASE_SERVICE_ROLE is deprecated. Please migrate to SUPABASE_SERVICE_ROLE_KEY."
@@ -40,13 +41,23 @@ export const env: Env = (() => {
     serviceRoleKey = SUPABASE_SERVICE_ROLE;
   }
 
+  // Handle storage bucket migration
+  let storageBucket = SUPABASE_STORAGE_BUCKET ?? null;
+  if (!storageBucket && STORAGE_BUCKET) {
+    console.warn(
+      "[env] STORAGE_BUCKET is deprecated. Please migrate to SUPABASE_STORAGE_BUCKET."
+    );
+    storageBucket = STORAGE_BUCKET;
+  }
+
   const isSupabaseReady = Boolean(
-    rest.SUPABASE_URL && serviceRoleKey && rest.SUPABASE_STORAGE_BUCKET
+    rest.SUPABASE_URL && serviceRoleKey && storageBucket
   );
 
   return {
     ...rest,
     SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey ?? undefined,
+    SUPABASE_STORAGE_BUCKET: storageBucket ?? undefined,
     isSupabaseReady,
   };
 })();
