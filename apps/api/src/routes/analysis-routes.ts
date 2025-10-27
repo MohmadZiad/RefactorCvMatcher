@@ -4,8 +4,14 @@ import { z } from "zod";
 import { AnalysisService } from "../services/analysis-service";
 
 const BatchPayloadSchema = z.object({
-  jobId: z.string().min(1),
-  cvIds: z.array(z.string().min(1)).min(1),
+  jobId: z.string().min(1, "Job ID is required"),
+  cvIds: z
+    .array(z.string().min(1, "Each CV ID must be a non-empty string"))
+    .min(1, "At least one CV ID is required")
+    .refine(
+      (ids) => ids.every((id) => id !== null && id !== undefined),
+      "CV IDs cannot contain null or undefined values"
+    ),
   topK: z.number().int().positive().max(50).optional(),
   strictMust: z.boolean().optional(),
 });
@@ -18,7 +24,11 @@ export async function registerAnalysisRoutes(
     const parseResult = BatchPayloadSchema.safeParse(request.body);
 
     if (!parseResult.success) {
-      return reply.status(400).send({ error: parseResult.error.message });
+      app.log.warn({ error: parseResult.error }, "Invalid batch payload");
+      return reply.status(400).send({
+        error: "Validation failed",
+        details: parseResult.error.errors,
+      });
     }
 
     try {
