@@ -15,7 +15,6 @@ export type CV = {
   updatedAt?: string;
 };
 
-
 export type UploadCVResponse = {
   ok: boolean;
   cvId: string;
@@ -36,68 +35,44 @@ export function buildPublicUrl(cv: CV): string | null {
 
 export const cvApi = {
   async upload(file: File): Promise<UploadCVResponse> {
-    console.log("📤 Starting upload:", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      sizeInMB: (file.size / (1024 * 1024)).toFixed(2) + " MB",
-    });
-
-    const maxSize = 20 * 1024 * 1024;
-    if (file.size > maxSize) {
-      throw new Error("حجم الملف كبير جداً. الحد الأقصى 20MB.");
-    }
-
-    const form = new FormData();
-    form.append("file", file, file.name);
-
     const url = `${API}/cv/upload`;
-    console.log("📡 Sending request to:", url);
+    const form = new FormData();
+    form.append("file", file);
 
+    const res = await fetch(url, { method: "POST", body: form });
+    const raw = await res.text();
+
+    // حاول نقرأ JSON؛ لو فشل نرمي خطأ واضح
+    let payload: any = null;
     try {
-      const res = await fetch(url, { method: "POST", body: form });
-      console.log("📨 Response status:", res.status, res.statusText);
-
-      const ct = res.headers.get("content-type") || "";
-      let payload: any = null;
-      let rawText = "";
-
-      if (ct.includes("application/json")) {
-        payload = await res.json().catch(() => null);
-      } else {
-        rawText = await res.text().catch(() => "");
-        try {
-          payload = rawText ? JSON.parse(rawText) : null;
-        } catch {}
-      }
-
-      if (!res.ok) {
-        const message =
-          payload?.message || rawText || `HTTP ${res.status} ${res.statusText}`;
-        console.error("❌ Upload error payload:", payload ?? rawText);
-        throw new Error(message);
-      }
-
-      if (!payload || payload.ok !== true) {
-        console.warn("⚠️ Unexpected success payload:", payload);
-      }
-
-      console.log("✅ Upload successful:", payload);
-      return payload as UploadCVResponse;
-    } catch (e: any) {
-      console.error("❌ Upload failed:", e);
-
-      const msg = String(e?.message || "").toLowerCase();
-      if (
-        msg.includes("failed to fetch") ||
-        msg.includes("connection refused")
-      ) {
-        throw new Error(
-          "فشل الاتصال بالسيرفر. تأكّد أن الـ API يعمل على http://localhost:4000 وأن CORS مفعّل."
-        );
-      }
-      throw e;
+      payload = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new Error(
+        `Unexpected response from upload. Status ${res.status}. Body: ${raw?.slice(0, 200)}`
+      );
     }
+    if (!res.ok) {
+      const msg = payload?.error || res.statusText || "Upload failed";
+      throw new Error(String(msg));
+    }
+
+    // 🔧 التطبيع: السيرفر الآن يرجّع { id, filename, url }
+    // نعيد الشكل القديم المتوقع من الواجهة { cvId, parts, storagePath, publicUrl, parsed, textLength }
+    const normalized: UploadCVResponse = {
+      ok: payload?.ok ?? true,
+      cvId: payload?.cvId ?? payload?.id, // <— المهم!
+      parts: payload?.parts ?? 0,
+      storagePath: payload?.storagePath ?? payload?.path ?? "",
+      publicUrl: payload?.publicUrl ?? payload?.url ?? undefined,
+      parsed: payload?.parsed ?? true,
+      textLength: payload?.textLength ?? undefined,
+    };
+
+    if (!normalized.cvId) {
+      throw new Error("Upload response missing cvId");
+    }
+
+    return normalized;
   },
 
   async list(): Promise<{ items: CV[] }> {

@@ -4,8 +4,9 @@ export type JobRequirement = {
   id?: string;
   requirement: string;
   mustHave: boolean;
-  weight: number;
+  weight: number; // 0..10
 };
+
 export type Job = {
   id: string;
   title: string;
@@ -22,23 +23,28 @@ export const jobsApi = {
   }) {
     return http.post<Job>("/jobs", input);
   },
+
   list() {
     return http.get<{ items: Job[] }>("/jobs");
   },
+
   get(id: string) {
     return http.get<Job>(`/jobs/${id}`);
   },
+
   addRequirements(jobId: string, items: JobRequirement[]) {
-    return http.post(`/jobs/${jobId}/requirements`, { items });
-  },
-  updateRequirement(id: string, payload: Partial<JobRequirement>) {
-    return http.patch(`/jobs/requirements/${id}`, payload);
-  },
-  deleteRequirement(id: string) {
-    return http.delete(`/jobs/requirements/${id}`);
+    return http.post<{ ok: true }>(`/jobs/${jobId}/requirements`, { items });
   },
 
-  // NEW: اقتراح متطلبات من JD
+  updateRequirement(id: string, payload: Partial<JobRequirement>) {
+    return http.patch<{ ok: true }>(`/jobs/requirements/${id}`, payload);
+  },
+
+  deleteRequirement(id: string) {
+    return http.delete<{ ok: true }>(`/jobs/requirements/${id}`);
+  },
+
+  // اقتراح متطلبات من وصف وظيفي (JD)
   suggestFromJD(jdText: string) {
     return http.post<{ items: JobRequirement[] }>("/jobs/suggest", { jdText });
   },

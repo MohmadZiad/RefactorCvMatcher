@@ -5,7 +5,7 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().default(4000),
   API_ORIGIN: z.string().default("http://localhost:3000"),
   SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).optional(),
   SUPABASE_CV_TABLE: z.string().min(1).optional(),
 });
@@ -24,7 +24,7 @@ export const env: Env = (() => {
 
   const values = parsed.data;
   const isSupabaseReady = Boolean(
-    values.SUPABASE_URL && values.SUPABASE_SERVICE_ROLE_KEY && values.SUPABASE_STORAGE_BUCKET
+    values.SUPABASE_URL && values.SUPABASE_SERVICE_ROLE && values.SUPABASE_STORAGE_BUCKET
   );
 
   return {

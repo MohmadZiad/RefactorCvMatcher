@@ -396,8 +396,10 @@ ${reqText}`
           </div>
         ),
       });
-      const a = await analysesApi.run({ jobId: job.id, cvId: uploaded.cvId });
-      const final = await analysesApi.get(a.id);
+       const a = await analysesApi.run({
+           jobId: job.id,
+            cvId: (uploaded as any).cvId ?? (uploaded as any).id,
+           });      const final = await analysesApi.get(a.id);
       setResult(final);
       push({
         role: "bot",
