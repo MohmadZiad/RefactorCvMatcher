@@ -6,13 +6,13 @@ import { env } from "../env";
 export type Supabase = SupabaseClient | undefined;
 
 export function createSupabaseClient(): Supabase {
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, isSupabaseReady } = env;
 
-  if (!env.isSupabaseReady || !env.SUPABASE_URL || !serviceRoleKey) {
+  if (!isSupabaseReady || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     return undefined;
   }
 
-  return createClient(env.SUPABASE_URL, serviceRoleKey, {
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
