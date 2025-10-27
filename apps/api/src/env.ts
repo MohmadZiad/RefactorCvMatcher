@@ -6,6 +6,7 @@ const EnvSchema = z.object({
   API_ORIGIN: z.string().default("http://localhost:3000"),
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE: z.string().min(1).optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).optional(),
   SUPABASE_CV_TABLE: z.string().min(1).optional(),
 });
@@ -23,12 +24,25 @@ export const env: Env = (() => {
   }
 
   const values = parsed.data;
+
+  const { SUPABASE_SERVICE_ROLE, ...rest } = values;
+
+  let serviceRoleKey = rest.SUPABASE_SERVICE_ROLE_KEY ?? null;
+
+  if (!serviceRoleKey && SUPABASE_SERVICE_ROLE) {
+    console.warn(
+      "[env] SUPABASE_SERVICE_ROLE is deprecated. Please migrate to SUPABASE_SERVICE_ROLE_KEY."
+    );
+    serviceRoleKey = SUPABASE_SERVICE_ROLE;
+  }
+
   const isSupabaseReady = Boolean(
-    values.SUPABASE_URL && values.SUPABASE_SERVICE_ROLE_KEY && values.SUPABASE_STORAGE_BUCKET
+    rest.SUPABASE_URL && serviceRoleKey && rest.SUPABASE_STORAGE_BUCKET
   );
 
   return {
-    ...values,
+    ...rest,
+    SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey ?? undefined,
     isSupabaseReady,
   };
 })();
